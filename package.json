@@ -8,7 +8,8 @@
     "watch": "nodemon index.js",
     "client": "cd client && npm run start",
     "dev": "concurrently \"npm run watch\" \"npm run client\"",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "heroku-postbuild": "NPM_CONFIG_FALSE=false npm install --prefix client && npm run build --prefix client"
   },
   "author": "Abdul Shabbir",
   "license": "MIT",
