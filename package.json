@@ -4,19 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "watch": "nodemon index.js"
+    "client-install": "cd client && npm install",
+    "watch": "nodemon index.js",
+    "client": "cd client && npm run start",
+    "dev": "concurrently \"npm run watch\" \"npm run client\""
   },
   "author": "Abdul Shabbir",
   "license": "MIT",
   "devDependencies": {
+    "concurrently": "^4.1.1",
     "nodemon": "^1.19.1"
   },
   "dependencies": {
-    "morgan": "^1.9.1",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "mongoose": "^5.6.2",
+    "morgan": "^1.9.1",
+    "uuid": "^3.3.2"
   }
 }

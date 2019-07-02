@@ -3,33 +3,12 @@ const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
-
-let persons = [
-    {
-        name: "Arto Hellas",
-        number: "040-123456",
-        id: 1
-    },
-    {
-        name: "Ada Lovelace",
-        number: "39-44-5323523",
-        id: 2
-    },
-    {
-        name: "Dan Abromov",
-        number: "12-43-234345",
-        id: 3
-    },
-    {
-        name: "Mary Poppendieck",
-        number: "39-23-6423122",
-        id: 4
-    }
-]
+const mongoose = require('mongoose')
+const MONGO_PASSWORD = 'fullstack'
+const MONGODB_URI = `mongodb+srv://fullstack:${MONGO_PASSWORD}@phonebook-ajaa7.mongodb.net/test?retryWrites=true&w=majority`
 
 app.use(cors())
 app.use(bodyParser.json())
-
 
 // custom morgan 'token' to be displayed in terminal
 morgan.token('req-body', (req) => {
@@ -39,75 +18,132 @@ morgan.token('req-body', (req) => {
 // morgan message to be displayed anytime a request is made
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :req-body'))
 
-app.get('/', (req, res) => {
-    console.log('hello world') 
-    res.send('please naviagate to /api/persons')
-    res.end()
+// ---------------------- DATABASE -----------------------------------//
+
+// connect to database...
+mongoose
+    .connect(MONGODB_URI,{ useNewUrlParser: true })
+    .then((result) => console.log('connected to database!'))
+    .catch((error) => console.log(error))
+
+// create person schema...
+const PersonSchema = new mongoose.Schema({
+    name: String,
+    number: String
 })
 
+// transform toJSON method so 'IDs' on the front-end match backend
+PersonSchema.set('toJSON', {
+    transform: (document, returnedDocument) => {
+        returnedDocument.id = returnedDocument._id
+        delete returnedDocument._id
+        delete returnedDocument.__v
+        return returnedDocument
+    }
+})
+
+const Person = mongoose.model('Person', PersonSchema)
+
+// -------------   GET routes  ---------------------------//
+
+// Note all get requests are prefixed with http://localhost:5000
 app.get('/api/persons', (req, res) => {
-    res.send(persons)
-    res.end()
+    // Find all people in database
+    Person.find({}, (error, docs) => {
+        // error searching through database
+        if (error) return res.status(500).json(error)
+
+        // no documents found
+        if (!docs) return res.status(404).json({error: 'no documents in database'})
+
+        // Format people and serve them to front-end
+        const people = docs.map(person => person.toJSON())
+        res.json(people)
+    })
 })
 
 app.get('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    const note = persons.find(n => n.id === id)
-    if (note) {
-        res.json(note)
-    }
-    else {
-        res.status(404).end()
-    }
+    const id = req.params.id
+    Person.findById(id, 
+        (error, doc) => {
+            // error searching thorugh database
+            if (error) return res.status(500).json(error)
+
+            // database could not find matching document
+            if (!doc) return res.status(404).json({error: 'document cannot be found'})
+            
+            // serve matching document
+            res.json(doc.toJSON())
+    })
 })
+
+// -------------   POST route  ---------------------------//
+
+// Note all requests are prefixed with http://localhost:5000
+app.post('/api/persons', (req, res) => {
+    const {number, name} = req.body
+    
+    // Bad request errors
+    if (!number) return res.status(400).json({error: 'number missing'})
+    if(!name) return res.status(400).json({error: 'name missing'})
+
+    // Instantiate new DB document using model
+    const newPerson = new Person({
+        name: name,
+        number: number
+    })
+
+    // Save document to DB
+    newPerson.save((error, savedPerson) => {
+        if (error) console.log(error)
+
+        Person.find({}, (error, docs) => {
+            docs = docs.map(person => person.toJSON())
+            res.json(docs)
+        })
+    })
+})
+
+// -------------   PUT route  ---------------------------//
+
+app.put('/api/persons/:id', (req, res) => {
+    const {number, id} = req.body
+
+    Person.findByIdAndUpdate(
+        // find this object...
+        id, 
+        // update only the number - DB will copy remaining fields...
+        {
+            number: number, 
+        }, 
+        (error, doc) => {
+            // DB error
+            if (error) return res.status(500).json(error)
+            if (!doc) return res.status(400).json({error: 'Document to update does not exist in database'})
+            
+            res.json(doc.toJSON())
+        })
+})
+
+// -------------   DELETE route  ---------------------------//
 
 app.delete('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    persons = persons.filter(n => n.id !== id)
-    res.json(persons)
-})
+    const { id  } = req.params
 
+    Person.findByIdAndDelete(id, 
+        (error, doc) => {
+            if (error) return res.status(500).json(error)
+            if (!doc) return res.status(400).json({error: 'Document to delete does not exist in databse'})
 
-app.get('/api/persons/info', (req, res) => {
-    const date = new Date(Date.now())
-    res.set('Content-Type', 'text/html')
-    res.write(`<p>Phonebook has info for ${persons.length} people</p> ${date.toString()}`)
-    res.end()
-})
-
-app.post('/api/persons', (req, res) => {
-    const generateUniqueId = () => Math.floor(Math.random()*1000000)
-
-    if(!req.body.number) {
-        return res.status(400).json({
-            error: 'number missing'
-        })
-    }
-    else if(!req.body.name) {
-        return res.status(400).json({
-            error: 'name missing'
-        })
-    }
-
-    const matchingPerson = persons.find(person => person.name === req.body.name)
-    if (matchingPerson) {
-        return res.status(400).json({
-            error: 'Name already exists in phonebook'
-        })
-    }
-    
-    const newPerson = {
-        name: req.body.name,
-        number: req.body.number,
-        id: generateUniqueId()
-    }
-    persons = [...persons, newPerson]
-    res.json([...persons,newPerson]
+            res.json(doc.toJSON())
+        }
     )
 })
 
-const PORT = process.env.PORT || 3001
+
+
+const PORT = 5000
 
 app.listen(PORT, () =>{
-    console.log(`listening on port ${PORT}`)
+    console.log(`server is listening on port ${PORT}`)
 })
