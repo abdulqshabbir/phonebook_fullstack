@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios from '../../node_modules/axios'
 const URL = 'http://localhost:5000/api/persons'
 
 const getAllPeople = () => {

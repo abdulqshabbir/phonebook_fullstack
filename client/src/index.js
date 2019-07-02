@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from 'react';
-import ReactDOM from 'react-dom';
+import React, {useState, useEffect} from '../node_modules/react';
+import ReactDOM from '../node_modules/react-dom';
 import FilteredContacts from './helperFunctions/filteredContacts'
 import AddPersonForm from './components/AddPersonForm';
 import personHttp from './httpMethods/personHttpMethods';

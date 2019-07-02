@@ -1,7 +1,7 @@
-import React from 'react'
+import React from '../../node_modules/react'
 import Person from '../components/Person'
 import isPhonebookMatch from './isPhonebookMatch'
-import uuid from 'uuid'
+import uuid from '../../node_modules/uuid'
 
 const FilteredContacts = ({persons, searchQuery, handlePersonDeletion}) => {
     return(
